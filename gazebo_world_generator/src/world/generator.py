@@ -571,7 +571,10 @@ class WorldGenerator:
 
     def _populate_rooms(self):
         """Populate each room with objects using the placement engine."""
-        self.models.append(GazeboModel(name="ground_plane", model_path="model://ground_plane", category="ground",
+        # Harmonic (gz-sim8) has no bundled model://ground_plane, so we emit
+        # an inline <plane> geometry instead (see the "built_in_wall" pattern
+        # below for the same approach applied to walls).
+        self.models.append(GazeboModel(name="ground_plane", model_path="built_in_ground_plane", category="ground",
                                        pose={"x": 0, "y": 0, "z": 0, "roll": 0, "pitch": 0, "yaw": 0}, static=True))
         
         for room in self.rooms:
@@ -1063,7 +1066,25 @@ class WorldGenerator:
                 ET.SubElement(include, "pose").text = pose_text
                 if model.static:
                     ET.SubElement(include, "static").text = "true"
-                    
+
+            elif model.model_path == "built_in_ground_plane":
+                model_elem = ET.SubElement(world, "model", name=model.name)
+                ET.SubElement(model_elem, "static").text = "true"
+                ET.SubElement(model_elem, "pose").text = pose_text
+                link = ET.SubElement(model_elem, "link", name="link")
+
+                collision = ET.SubElement(link, "collision", name="collision")
+                geometry = ET.SubElement(collision, "geometry")
+                plane = ET.SubElement(geometry, "plane")
+                ET.SubElement(plane, "normal").text = "0 0 1"
+                ET.SubElement(plane, "size").text = "200 200"
+
+                visual = ET.SubElement(link, "visual", name="visual")
+                geometry = ET.SubElement(visual, "geometry")
+                plane = ET.SubElement(geometry, "plane")
+                ET.SubElement(plane, "normal").text = "0 0 1"
+                ET.SubElement(plane, "size").text = "200 200"
+
             elif model.model_path == "built_in_wall":
                 model_elem = ET.SubElement(world, "model", name=model.name)
                 ET.SubElement(model_elem, "static").text = "true"
@@ -1077,8 +1098,9 @@ class WorldGenerator:
                 box_geom_v = ET.SubElement(ET.SubElement(visual, "geometry"), "box")
                 ET.SubElement(box_geom_v, "size").text = size_str
                 mat = ET.SubElement(visual, "material")
-                script = ET.SubElement(mat, "script")
-                ET.SubElement(script, "name").text = "Gazebo/Grey"
+                ET.SubElement(mat, "ambient").text = "0.7 0.7 0.7 1"
+                ET.SubElement(mat, "diffuse").text = "0.7 0.7 0.7 1"
+                ET.SubElement(mat, "specular").text = "0.1 0.1 0.1 1"
 
                 # Collision with surface properties
                 collision = ET.SubElement(link, "collision", name="wall_collision")
@@ -1114,4 +1136,4 @@ class WorldGenerator:
         for room in self.rooms:
             obj_count = sum(1 for m in self.models if getattr(m, 'room', None) == room.name and m.category != "structure")
             print(f"    • {room.name} ({room.type}): {obj_count} objects")
-        print(f"\nRun with: gazebo {output_path}")
+        print(f"\nRun with: gz sim {output_path}")

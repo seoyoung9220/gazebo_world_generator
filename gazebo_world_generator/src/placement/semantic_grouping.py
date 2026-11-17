@@ -55,7 +55,22 @@ class SemanticGroupingEngine:
 
     def __init__(self, llm_interface):
         self.llm_interface = llm_interface
-        self.tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL, trust_remote_code=True)
+        # DEFAULT_MODEL may be a provider-internal name (e.g. Groq's
+        # "llama-3.3-70b-versatile") that doesn't exist as a HuggingFace
+        # repo. The tokenizer here is only used for approximate token
+        # counting / chat-template formatting, not for actual inference,
+        # so any tokenizer with a chat template works. Fall back to a
+        # small, always-public model if the configured one can't be found.
+        FALLBACK_TOKENIZER_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL, trust_remote_code=True)
+        except Exception as e:
+            logger.warning(
+                f"Could not load tokenizer for '{DEFAULT_MODEL}' ({e}). "
+                f"Falling back to '{FALLBACK_TOKENIZER_MODEL}' for token counting only "
+                f"(this does not affect which model actually generates responses)."
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(FALLBACK_TOKENIZER_MODEL, trust_remote_code=True)
         
         # Initialize PromptManager
         if llm_interface and hasattr(llm_interface, 'prompt_manager'):

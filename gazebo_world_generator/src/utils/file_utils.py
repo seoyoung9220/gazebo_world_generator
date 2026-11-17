@@ -24,9 +24,10 @@ def find_gazebo_model_path(model_name: str) -> Optional[Path]:
         return None
     
     search_paths = [
-        Path.home() / ".gazebo" / "models",
-        Path("/usr/share/gazebo/models"),
-        Path("/usr/share/gazebo-11/models"),
+        Path.home() / ".gz" / "models",
+        Path.home() / ".gazebo" / "models",  # kept for backward-compat with existing local caches
+        Path("/usr/share/gz/models"),
+        Path("/usr/local/share/gz/models"),
     ]
 
     # First try: search by directory name (fast path)

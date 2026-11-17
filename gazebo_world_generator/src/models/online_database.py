@@ -44,7 +44,7 @@ class OnlineModelDatabase:
             except Exception as e:
                 logger.warning(f"Failed to initialize PromptManager in OnlineModelDatabase: {e}")
                 self.prompt_manager = None
-        self.local_model_path = Path.home() / ".gazebo" / "models"
+        self.local_model_path = Path.home() / ".gz" / "models"
         self.local_model_path.mkdir(parents=True, exist_ok=True)
         
         logger.debug("Online Model Database initialized with caching and parallel search.")

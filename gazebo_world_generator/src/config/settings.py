@@ -117,7 +117,7 @@ class Config:
     
     # Essential Models
     ESSENTIAL_MODELS = {
-        "ground_plane": "model://ground_plane",
+        "ground_plane": "built_in_ground_plane",
         "sun": "model://sun"
     }
     

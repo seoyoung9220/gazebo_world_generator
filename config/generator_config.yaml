@@ -23,7 +23,7 @@ llm:
   #   - Ollama:     http://localhost:11434/v1
   #   - OpenAI:     https://api.openai.com/v1
   #   - Custom:     Your server URL
-  server_url: "http://localhost:1234/v1"
+  server_url: "https://api.groq.com/openai/v1"
   
   # Model name - The specific model to use
   # Examples:
@@ -31,7 +31,7 @@ llm:
   #   - Qwen/Qwen2.5-VL-32B-Instruct-AWQ
   #   - llama3.1:8b
   #   - gpt-4
-  model_name: "Qwen/Qwen3-VL-30B-A3B-Instruct-FP8"
+  model_name: "llama-3.3-70b-versatile"
 
 # -----------------------------------------------------------------------------
 # Output Configuration
@@ -57,15 +57,17 @@ output:
 models:
   # Local Gazebo model search paths
   # The system will search these directories for installed models
+  # (Gazebo Harmonic / gz-sim8 paths - set GZ_SIM_RESOURCE_PATH env var too)
   search_paths:
-    - "~/.gazebo/models"
-    - "/usr/share/gazebo-11/models"
-    - "/usr/local/share/gazebo-11/models"
-  
+    - "~/.gz/fuel/fuel.gazebosim.org"
+    - "~/.gz/models"
+    - "/usr/share/gz/models"
+    - "/usr/local/share/gz/models"
+
   # Model download/cache directory
-  # Downloaded models will be stored here
-  cache_directory: "~/.gazebo/models"
-  
+  # Downloaded models will be stored here (matches gz-fuel-tools default cache)
+  cache_directory: "~/.gz/fuel/fuel.gazebosim.org"
+
   # Online model resolution settings
   max_concurrent_downloads: 3
   max_search_results: 15

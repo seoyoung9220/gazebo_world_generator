@@ -69,7 +69,19 @@ class NaturalPlacementEngine:
         # Initialize collision detector (will be properly configured when placing objects)
         self.collision_detector = None
 
-        self.tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL, trust_remote_code=True)
+        # DEFAULT_MODEL may be a provider-internal name (e.g. Groq's
+        # "llama-3.3-70b-versatile") that doesn't exist as a HuggingFace
+        # repo. This tokenizer is only used for approximate token counting,
+        # so fall back to a small, always-public model if needed.
+        FALLBACK_TOKENIZER_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL, trust_remote_code=True)
+        except Exception as e:
+            logger.warning(
+                f"Could not load tokenizer for '{DEFAULT_MODEL}' ({e}). "
+                f"Falling back to '{FALLBACK_TOKENIZER_MODEL}' for token counting only."
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(FALLBACK_TOKENIZER_MODEL, trust_remote_code=True)
         
         # Initialize PromptManager
         if llm_interface and hasattr(llm_interface, 'prompt_manager'):

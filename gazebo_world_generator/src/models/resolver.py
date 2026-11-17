@@ -192,8 +192,12 @@ class SmartModelResolver:
             mesh_uris = re.findall(r'model://([^/\s<>"]+)/meshes/', sdf_content)
 
             for mesh_model_name in set(mesh_uris):
-                # If the mesh references a different model name than the directory
-                if mesh_model_name != dir_name and mesh_model_name.lower() != dir_name.lower():
+                # Linux filesystems (ext4, etc.) are case-sensitive, so a
+                # directory that only differs by case (e.g. "Prius_Hybrid"
+                # vs. a mesh URI referencing "prius_hybrid") will NOT be
+                # found without an explicit symlink. Only skip when the
+                # names are truly identical.
+                if mesh_model_name != dir_name:
                     symlink_path = base_path / mesh_model_name
 
                     # Create symlink if it doesn't exist
@@ -379,10 +383,40 @@ class SmartModelResolver:
             if best_model_info:
                 local_model_path = self.online_db.download_model(best_model_info)
                 if local_model_path and local_model_path.is_dir():
-                    model_name = local_model_path.name
+                    base_path = local_model_path.parent
+                    dir_name = local_model_path.name
+                    current_dir_name = dir_name
+
+                    # Same space-handling as _scan_local_models(): a freshly
+                    # downloaded model won't be picked up by a rescan until
+                    # the next run, so apply the same symlink fixes here,
+                    # immediately, rather than waiting.
+                    if ' ' in dir_name:
+                        clean_name = dir_name.replace(' ', '_')
+                        symlink_path = base_path / clean_name
+                        if not symlink_path.exists():
+                            try:
+                                symlink_path.symlink_to(local_model_path, target_is_directory=True)
+                                logger.info(f"Created symlink for spaced directory: {clean_name} -> '{dir_name}'")
+                            except (OSError, PermissionError) as e:
+                                logger.warning(f"Could not create symlink for '{dir_name}': {e}")
+                        current_dir_name = clean_name
+
+                    # Fix mismatches between the directory name and whatever
+                    # name the model.sdf's own mesh <uri> elements use
+                    # internally (e.g. "Prius Hybrid" dir vs. an internal
+                    # "model://prius_hybrid/meshes/..." reference).
+                    self._ensure_mesh_uri_compatibility(base_path, local_model_path, current_dir_name)
+
+                    model_name = current_dir_name
                     logger.info(f"🌐 Download successful. Using model '{model_name}'")
                     self.local_models.add(model_name)
-                    return f"model://{model_name}" # Returns the full URI
+                    # get_directory_for_model() looks up this map, not local_models,
+                    # so it must be updated too or the freshly-downloaded model
+                    # will still be reported as "not found" right after download.
+                    self._model_name_to_dir_map[model_name] = model_name
+                    return model_name  # Bare name, consistent with the other _find_* methods;
+                                       # find_best_model() adds the "model://" prefix itself.
                 else:
                     logger.error(f"Failed to download or verify model '{best_model_info['name']}'.")
 

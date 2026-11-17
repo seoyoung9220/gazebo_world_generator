@@ -819,7 +819,7 @@ def run_generation(
         print(f"   Map:   {Style.CYAN}{map_files['yaml']}{Style.ENDC}")
         print(f"          {Style.CYAN}{map_files['pgm']}{Style.ENDC}")
     print(f"\n🚀 {Style.BOLD}Launch:{Style.ENDC}")
-    print(f"   {Style.YELLOW}gazebo {final_world}{Style.ENDC}\n")
+    print(f"   {Style.YELLOW}gz sim {final_world}{Style.ENDC}\n")
 
     return 0
 
@@ -860,7 +860,12 @@ def generate_occupancy_map(world_file, output_dir):
             "yaml": f"{output_dir}/{map_name}.yaml",
             "pgm": f"{output_dir}/{map_name}.pgm",
         }
-    raise RuntimeError(result.stderr)
+    # generate_map.sh writes most of its diagnostics to stdout via echo,
+    # not stderr, so stderr alone is often empty on failure. Include both.
+    error_detail = (result.stderr or "").strip()
+    if not error_detail:
+        error_detail = (result.stdout or "").strip()[-2000:]  # last part is most relevant
+    raise RuntimeError(error_detail or f"generate_map.sh exited with code {result.returncode} and no output")
 
 
 def test_llm_connection(llm_server, model):
